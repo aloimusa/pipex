@@ -12,102 +12,51 @@
 
 #include "pipex.h"
 
-static void		exit_after_children(t_pipe *p);
-static t_pipe	*init_struct(int ac);
+static void	exit_after_children(t_pipe p);
+static char	*get_path2(char **prog, char *ptr);
 
 int	main(int ac, char **av, char **env)
 {
-	t_pipe	*p;
+	t_pipe	p;
 
-	if (ac != 5)
+	if (ac < 5)
 		exit(EXIT_SUCCESS);
-	check_files(av, ac);
-	p = init_struct(ac);
-	while (++p->child < ac - 3)
+	p.pid = ft_calloc((ac - 3), sizeof(int));
+	p.child = -1;
+	while (++p.child < ac - 3)
 	{
-		if (pipe(p->fd[NEXT]) == -1)
-			exit(EXIT_FAILURE);
-		p->pid[p->child] = fork();
-		if (p->pid[p->child] == -1)
-			exit(EXIT_FAILURE);
-		if (p->pid[p->child] == 0)
+		if (pipe(p.fd[NEXT]) == -1)
+			exit_error("pipe failed\n", p.pid, FREE_OBJ, 1);
+		p.pid[p.child] = fork();
+		if (p.pid[p.child] == -1)
+			exit_error("fork failed\n", p.pid, FREE_OBJ, 1);
+		if (p.pid[p.child] == 0)
+			child(ac, av, env, p);
+		if (p.child != 0)
 		{
-			init_pipes(ac, av, p);
-			if (p->child != ac - 4)
-				dup2(p->fd[NEXT][WRITE], STDOUT_FILENO);
-			close(p->fd[NEXT][WRITE]);
-			execute(av, env, free_pipex(NULL, p));
+			close(p.fd[LAST][WRITE]);
+			close(p.fd[LAST][READ]);
 		}
-		cleanup(ac, p);
+		p.fd[LAST][WRITE] = p.fd[NEXT][WRITE];
+		p.fd[LAST][READ] = p.fd[NEXT][READ];
 	}
 	exit_after_children(p);
 }
 
-char	*str_to_bin(char *bin, char **env)
-{
-	char	*ptr;
-	char	**array;
-	int		i;
-
-	if (exec_cases(bin, env) == 1)
-		return (ft_strdup(bin));
-	ptr = ft_strnstr(*env, "PATH=", 5);
-	while (!ptr && *++env)
-		ptr = ft_strnstr(*env, "PATH=", 5);
-	if (!ptr)
-		return (NULL);
-	array = ft_split(ptr + 5, ':');
-	if (!array)
-		return (NULL);
-	i = -1;
-	while (array[++i])
-	{
-		ptr = ft_strapp(ft_strjoin(array[i], "/"), bin);
-		if (access(ptr, X_OK) == 0)
-			break ;
-		free(ptr);
-		ptr = NULL;
-	}
-	free_pipex(array, NULL);
-	return (ptr);
-}
-
-int	free_pipex(char **array, t_pipe *p)
-{
-	int	i;
-	int	child;
-
-	if (array)
-	{
-		i = -1;
-		while (array[++i])
-			free(array[i]);
-		free(array);
-	}
-	if (p)
-	{
-		i = -1;
-		if (p->pid)
-			free(p->pid);
-		child = p->child;
-		free(p);
-		return (child);
-	}
-	return (0);
-}
-
-static void	exit_after_children(t_pipe *p)
+static void	exit_after_children(t_pipe p)
 {
 	int	i;
 	int	status;
 	int	last_status;
 
+	close(p.fd[LAST][WRITE]);
+	close(p.fd[LAST][READ]);
 	i = -1;
-	while (++i < p->child - 1)
-		waitpid(p->pid[i], &status, 0);
+	while (++i < p.child - 1)
+		waitpid(p.pid[i], &status, 0);
 	last_status = 0;
-	waitpid(p->pid[p->child - 1], &last_status, 0);
-	free_pipex(NULL, p);
+	waitpid(p.pid[p.child - 1], &last_status, 0);
+	free(p.pid);
 	if (WIFEXITED(last_status))
 		exit(WEXITSTATUS(last_status));
 	else if (WIFSIGNALED(last_status))
@@ -116,14 +65,63 @@ static void	exit_after_children(t_pipe *p)
 		exit(1);
 }
 
-static t_pipe	*init_struct(int ac)
+char	*get_path(char **prog, char **env)
 {
-	t_pipe	*p;
+	char	*ptr;
 
-	p = ft_calloc(1, sizeof(t_pipe));
-	if (!p)
-		exit(code("pointer"));
-	p->pid = malloc((ac - 3) * sizeof(int));
-	p->child = -1;
-	return (p);
+	if (access(prog[0], X_OK) == 0)
+		return (ft_strdup(prog[0]));
+	ptr = ft_strnstr(*env, "PATH=", 5);
+	while (!ptr && *++env)
+		ptr = ft_strnstr(*env, "PATH=", 5);
+	if (!ptr || ft_strncmp(prog[0], "./", 2) == 0)
+	{
+		ptr = ft_strdup(prog[0]);
+		free_array(prog);
+		if (!ptr)
+			exit_error("malloc failed", NULL, NO, 1);
+		if (errno == EPERM || errno == EACCES)
+			exit_error("%s lacks executable permissions", ptr, FREE_OBJ, 126);
+		else if (errno == ENOEXEC)
+			exit_error("%s isn't an exeutable", ptr, FREE_OBJ, 126);
+		else
+			exit_error("%s can't be executed", ptr, FREE_OBJ, 1);
+	}
+	return (get_path2(prog, ptr));
+}
+
+static char	*get_path2(char **prog, char *ptr)
+{
+	int		i;
+	char	**array;
+
+	array = ft_split(ptr + 5, ':');
+	if (!array)
+		if (free_array(prog))
+			exit_error("malloc failed", NULL, NO, 1);
+	i = -1;
+	while (array[++i])
+	{
+		ptr = ft_strapp(ft_strjoin(array[i], "/"), prog[0]);
+		if (access(ptr, X_OK) == 0)
+			break ;
+		free(ptr);
+		ptr = NULL;
+	}
+	free_array(array);
+	return (ptr);
+}
+
+int	free_array(char **array)
+{
+	int	i;
+
+	if (array)
+	{
+		i = -1;
+		while (array[++i])
+			free(array[i]);
+		free(array);
+	}
+	return (1);
 }

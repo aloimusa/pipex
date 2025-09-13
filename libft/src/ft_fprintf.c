@@ -15,6 +15,7 @@
 static ssize_t	specify(va_list *arg, char c, int fd);
 static ssize_t	ft_puthex_fd(uintptr_t n, char c, int fd);
 static int		validate(const char *s);
+static int		print(int fd, const char *s, size_t *i);
 
 int	ft_fprintf(int fd, const char *format, ...)
 {
@@ -33,7 +34,7 @@ int	ft_fprintf(int fd, const char *format, ...)
 		if (format[i++] == '%')
 			ret = specify(&arg, format[i++], fd);
 		else
-			ret = write(fd, &format[i - 1], 1);
+			ret = print(fd, format, &i);
 		if (ret < 0)
 		{
 			va_end(arg);
@@ -43,6 +44,22 @@ int	ft_fprintf(int fd, const char *format, ...)
 	}
 	va_end(arg);
 	return ((int)len);
+}
+
+int	print(int fd, const char *s, size_t *i)
+{
+	ssize_t	len;
+	char	*ptr;
+
+	len = 0;
+	*i = *i - 1;
+	ptr = (char *)&s[*i];
+	while (s[*i] && s[*i] != '%')
+	{
+		*i = *i + 1;
+		len++;
+	}
+	return (write(fd, ptr, len));
 }
 
 static int	validate(const char *s)
@@ -73,7 +90,7 @@ static ssize_t	specify(va_list *arg, char c, int fd)
 		return (ft_puthex_fd((uintptr_t)(va_arg(*arg, void *)), c, fd));
 	if (c == 'x' || c == 'X')
 		return (ft_puthex_fd((unsigned int)(va_arg(*arg, unsigned int)), c,
-			fd));
+				fd));
 	if (c == '%')
 		return (write(fd, "%", 1));
 	return (-1);
