@@ -20,16 +20,16 @@ int	main(int ac, char **av, char **env)
 	t_pipe	p;
 
 	if (ac < 5)
-		exit(EXIT_SUCCESS);
+		exit(0);
 	p.pid = ft_calloc((ac - 3), sizeof(int));
 	p.child = -1;
 	while (++p.child < ac - 3)
 	{
 		if (pipe(p.fd[NEXT]) == -1)
-			exit_error("pipe failed\n", p.pid, FREE_OBJ, 1);
+			exit_error("pipe failed\n", p.pid, FREE_OBJ, 2);
 		p.pid[p.child] = fork();
 		if (p.pid[p.child] == -1)
-			exit_error("fork failed\n", p.pid, FREE_OBJ, 1);
+			exit_error("fork failed\n", p.pid, FREE_OBJ, 2);
 		if (p.pid[p.child] == 0)
 			child(ac, av, env, p);
 		if (p.child != 0)
@@ -79,13 +79,13 @@ char	*get_path(char **prog, char **env)
 		ptr = ft_strdup(prog[0]);
 		free_array(prog);
 		if (!ptr)
-			exit_error("malloc failed", NULL, NO, 1);
-		if (errno == EPERM || errno == EACCES)
-			exit_error("%s lacks executable permissions", ptr, FREE_OBJ, 126);
-		else if (errno == ENOEXEC)
-			exit_error("%s isn't an exeutable", ptr, FREE_OBJ, 126);
+			exit_error("malloc failed\n", NULL, NO, 2);
+		if (errno == ENOENT)
+			exit_error("%s isn't a binary\n", ptr, FREE_OBJ, 127);
+		else if (errno == EPERM || errno == EACCES)
+			exit_error("%s lacks executable permissions\n", ptr, FREE_OBJ, 126);
 		else
-			exit_error("%s can't be executed", ptr, FREE_OBJ, 1);
+			exit_error("%s isn't executable\n", ptr, FREE_OBJ, 126);
 	}
 	return (get_path2(prog, ptr));
 }
@@ -98,7 +98,7 @@ static char	*get_path2(char **prog, char *ptr)
 	array = ft_split(ptr + 5, ':');
 	if (!array)
 		if (free_array(prog))
-			exit_error("malloc failed", NULL, NO, 1);
+			exit_error("malloc failed\n", NULL, NO, 2);
 	i = -1;
 	while (array[++i])
 	{

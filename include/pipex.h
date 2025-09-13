@@ -68,6 +68,6 @@ typedef struct s_pipe
 int		exit_error(char *msg, void *obj, int action, int code);
 void	open_fail(char *file);
 char	*get_path(char **prog, char **env);
-int 	free_array(char **array);
+int		free_array(char **array);
 void	child(int ac, char **av, char **env, t_pipe p);
 #endif

@@ -31,19 +31,17 @@ void	child(int ac, char **av, char **env, t_pipe p)
 			close(p.fd[NEXT][READ]);
 			close(p.fd[NEXT][WRITE]);
 			close(p.fd[LAST][READ]);
-			exit_error("1dup2 failed\n", NULL, NO, 1);
+			exit_error("dup2 failed\n", NULL, NO, 2);
 		}
 		close(p.fd[LAST][READ]);
 		if (dup2(p.fd[NEXT][WRITE], STDOUT_FILENO) == -1)
 		{
 			close(p.fd[NEXT][READ]);
 			close(p.fd[NEXT][WRITE]);
-			exit_error("2dup2 failed\n", NULL, NO, 1);
+			exit_error("dup2 failed\n", NULL, NO, 2);
 		}
 		close(p.fd[NEXT][WRITE]);
 	}
-	ft_fprintf(2, "child %d time\n", p.child);
-	DEBUG_FDS("excecute\n");
 	execute(av, env, p.child);
 }
 
@@ -53,7 +51,7 @@ static void	first_child(char **av, int fd[3][2])
 	{
 		close(fd[NEXT][WRITE]);
 		close(fd[NEXT][READ]);
-		exit_error("3dup2 failed\n", NULL, NO, 1);
+		exit_error("dup2 failed\n", NULL, NO, 2);
 	}
 	close(fd[NEXT][WRITE]);
 	fd[IOFD][IN] = open(av[1], O_RDONLY);
@@ -62,7 +60,7 @@ static void	first_child(char **av, int fd[3][2])
 	if (dup2(fd[IOFD][IN], STDIN_FILENO) == -1)
 	{
 		close(fd[IOFD][IN]);
-		exit_error("4dup2 failed\n", NULL, NO, 1);
+		exit_error("dup2 failed\n", NULL, NO, 2);
 	}
 	close(fd[IOFD][IN]);
 }
@@ -75,7 +73,7 @@ static void	last_child(char **av, int fd[3][2], int child)
 	if (dup2(fd[LAST][READ], STDIN_FILENO) == -1)
 	{
 		close(fd[LAST][READ]);
-		exit_error("5dup2 failed\n", NULL, NO, 1);
+		exit_error("dup2 failed\n", NULL, NO, 2);
 	}
 	close(fd[LAST][READ]);
 	fd[IOFD][OUT] = open(av[child + 3], O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -84,7 +82,7 @@ static void	last_child(char **av, int fd[3][2], int child)
 	if (dup2(fd[IOFD][OUT], STDOUT_FILENO) == -1)
 	{
 		close(fd[IOFD][OUT]);
-		exit_error("6dup2 failed\n", NULL, NO, 1);
+		exit_error("dup2 failed\n", NULL, NO, 2);
 	}
 	close(fd[IOFD][OUT]);
 }
@@ -96,37 +94,29 @@ static void	execute(char **av, char **env, int child)
 
 	array = ft_split(av[child + 2], ' ');
 	if (!array)
-		exit_error("malloc failed at execute\n", NULL, NO, 1);
+		exit_error("malloc failed\n", NULL, NO, 2);
 	if (!array[0] || !array[0][0])
 		if (free_array(array))
-			exit_error("empty strings aren't executable\n", NULL, NO, 1);
+			exit_error("empty strings aren't executable\n", NULL, NO, 127);
 	ptr = get_path(array, env);
 	if (!ptr)
 		if (free_array(array))
-			exit_error("malloc failed at execute2\n", NULL, NO, 1);
+			exit_error("%s wasn't found\n", av[child + 2], NO, 127);
 	free(array[0]);
 	array[0] = ptr;
 	execve(array[0], array, env);
 	free_array(array);
-	exit_error("execve failed\n", NULL, NO, 1);
-	exit(EXIT_FAILURE);
+	exit_error("execve failed\n", NULL, NO, 126);
 }
 
 int	exit_error(char *msg, void *obj, int action, int code)
 {
-	ft_fprintf(2, "code %d!\n", code);
-	if (action == PRINT_OBJ)
-		ft_fprintf(2, msg, obj);
-	else if (action == FREE_OBJ)
-		free(obj);
-	else if (action == NULL_OBJ)
-		obj = NULL;
-	else if (action == OPEN_FAIL)
+	if (action == OPEN_FAIL)
 	{
 		if (errno == EPERM || errno == EACCES)
-			exit_error("%s lacks permissions\n", obj, NO, 127);
+			exit_error("%s lacks permissions\n", obj, NO, 1);
 		else if (errno == ENOSPC)
-			exit_error("%s lacks space\n", obj, NO, 1);
+			exit_error("%s lacks space\n", obj, NO, 0);
 		else if (errno == ENOENT)
 			exit_error("%s doesn't exist\n", obj, NO, 126);
 		else if (errno == EISDIR)
@@ -134,8 +124,14 @@ int	exit_error(char *msg, void *obj, int action, int code)
 		else
 			exit_error("undefined error with %s\n", obj, NO, 1);
 	}
+	if (code >= 0 && msg)
+		ft_fprintf(2, "%d: ", code);
+	if (ft_strnstr(msg, "%s", ft_strlen(msg)) != NULL)
+		ft_fprintf(2, msg, (char *)obj);
 	else if (msg)
 		ft_fprintf(2, msg);
+	if (action == FREE_OBJ)
+		free(obj);
 	if (code >= 0)
 		exit(code);
 	return (1);

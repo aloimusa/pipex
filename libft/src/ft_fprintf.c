@@ -13,7 +13,7 @@
 #include "libft.h"
 
 static ssize_t	specify(va_list *arg, char c, int fd);
-static ssize_t	ft_puthex_fd(uintptr_t n, char c, int fd);
+static ssize_t	ft_putx_fd(uintptr_t n, char c, int fd);
 static int		validate(const char *s);
 static int		print(int fd, const char *s, size_t *i);
 
@@ -87,16 +87,15 @@ static ssize_t	specify(va_list *arg, char c, int fd)
 	if (c == 'u')
 		return (ft_putuint_fd((unsigned int)(va_arg(*arg, unsigned int)), fd));
 	if (c == 'p')
-		return (ft_puthex_fd((uintptr_t)(va_arg(*arg, void *)), c, fd));
+		return (ft_putx_fd((uintptr_t)(va_arg(*arg, void *)), c, fd));
 	if (c == 'x' || c == 'X')
-		return (ft_puthex_fd((unsigned int)(va_arg(*arg, unsigned int)), c,
-				fd));
+		return (ft_putx_fd((unsigned int)(va_arg(*arg, unsigned int)), c, fd));
 	if (c == '%')
 		return (write(fd, "%", 1));
 	return (-1);
 }
 
-static ssize_t	ft_puthex_fd(uintptr_t n, char c, int fd)
+static ssize_t	ft_putx_fd(uintptr_t n, char c, int fd)
 {
 	char		*hex;
 	char		array[18];
