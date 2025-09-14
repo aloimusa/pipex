@@ -1,6 +1,6 @@
 ifeq ($(MAKECMDGOALS),bonus)
 NAME := pipex
-SRC := main_bonus.c
+SRC := main_bonus.c child_bonus.c
 SRC_DIR := src_bonus
 OBJ = $(addprefix $(OBJ_DIR)/,$(SRC:.c=.o))
 else
@@ -27,7 +27,7 @@ bonus: $(NAME)
 $(LIBFT):
 	$(MAKE) -C $(LIBFT_DIR) --no-print-directory
 
-$(NAME): $(OBJ) $(LIBFT) $(MLX42)
+$(NAME): $(OBJ) $(LIBFT)
 	cc $(CFLAGS) $(OBJ) -L./$(LIBFT_DIR) -lft -o $(NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADER) | $(OBJ_DIR)

@@ -15,12 +15,7 @@
 # include "libft.h"
 # include <errno.h>
 # include <fcntl.h>
-# include <math.h>
-# include <stdbool.h>
-# include <stdio.h>
-# include <stdio.h>
 # include <stdlib.h>
-# include <string.h>
 # include <sys/wait.h>
 
 enum	e_pipe_head
@@ -53,17 +48,6 @@ typedef struct s_pipe
 	int	fd[3][2];
 	int	*pid;
 }		t_pipe;
-
-#define DEBUG_FDS(label) do { \
-    fprintf(stderr, "\n=== FD DEBUG ===\n"); \
-    int open_count = 0; \
-    for (int fd = 3; fd < 1024; fd++) { \
-        if (fcntl(fd, F_GETFD) != -1) { \
-            fprintf(stderr, "FD %d is OPEN\n", fd); \
-            open_count++; \
-        } \
-    } \
-} while(0)
 
 int		exit_error(char *msg, void *obj, int action, int code);
 void	open_fail(char *file);
